@@ -1,0 +1,78 @@
+{
+    "TelemetryServer": "https://localhost:1337", // maybe overridable in each specific limit? or is this better as a commmand line arg to the application?
+    "DangerGroups":
+    [
+        {
+            "Name":"NitrousOverPressure", 
+            "TriggerCooldown":null, // if null this alert is a single shot alert and must be fully un-raised before another alert can occur, otherwise it is the time in seconds before anothe aler can be raised
+            "StartMonitoring":null, // null - always running , ignition - looks for igniton
+            "Limits":
+            [
+                { // simple data limimts, time series limits, maybe allow transforms on data?? -> default simple i.e no transform
+                    "name":"sen0_raw_telemetry", // name or tag??? or task anme????
+                    "field":["ch0sens","ch1sens"],
+                    "transform":null, // if empty, simp
+                    "max":100, // if no max, then only min
+                    "min":1 
+                },
+                { 
+                    "ServerOverride":"https://ricardo-backend:1337", //provide telemetry server ovveride?
+                    "name":"sen0_raw_telemetry", 
+                    "field":["ch0sens","ch1sens"],
+                    "transform":null, // if empty, simp
+                    "max":100, // if no max, then only min
+                    "min":1 
+                }
+
+            ],
+            "Action": //n-actions if limit exceeded
+            [
+                {
+                    "url":"localhost:1338/api/stoptest",
+                    "type":"POST", // default POST?
+                    "payload": {"arg":0}
+                },
+                {
+                    "url":"localhost:1338/api/ventNitrous",
+                    "type":"POST",
+                    "payload": {"arg":0}
+                }
+            ]
+        },
+        {
+            "Name":"ChamberOverTemperature", 
+            "StartMonitoring":"Ignition", // null - always running , "SystemEvent", on system event call ( this is found in the messages (maybe should rename to events) channel) starts the monitoring until the last time series ends?
+            "StopMonitoring":"Stoptest", // once monitoring started, must be stopped first before starting again?
+            "Limits":
+            [
+                { // simple data limimts, time series limits, maybe allow transforms on data?? -> default simple i.e no transform
+                    "name":"sen0_raw_telemetry", // name or tag??? or task anme????
+                    "field":["ch3sens"],
+                    "max":{"time":[1,2],"value":[100,200]} // timeseries defintion, 0 is defined when monitoring starts, curretnly surpports only step profiles
+                },
+                {
+                    "name":"act_1_telemetry",
+                    "field":[], // if empty or we just dont include fields, we apply to all fields in the teleemtry packet
+                    "transform":{"type":"rate"},
+                    "max":10
+                },
+                {
+                    "name":"pdu0_telemetry",
+                    "fields":["system_status"],
+                    "transform":{"type":"bitfield","operation":"AND"}, // this needs to be worked out a little more?
+                    "mask":4 //0b100
+                }
+
+            ],
+            "Action":
+            [
+                {
+                    "url":"localhost:1338/api/stoptest",
+                    "type":"POST",
+                    "payload": {"arg":0}
+                }
+            ]
+        }
+    ]
+
+}
